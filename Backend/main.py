@@ -1,7 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
-from routes.click import router as click_router
+from routers.upload import router as upload_router
+from routers.analyze import router as analyze_router
+from routers.query import router as query_router
+from routers.report import router as report_router
+from routers.export import router as export_router
 
 app = FastAPI()
 
@@ -13,10 +16,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 👇 include routes
-app.include_router(click_router)
+
+app.include_router(upload_router)
+app.include_router(analyze_router)
+app.include_router(query_router)
+app.include_router(report_router)
+app.include_router(export_router)
 
 @app.get("/")
 def home():
     return {"message": "Backend working 🚀"}
-
