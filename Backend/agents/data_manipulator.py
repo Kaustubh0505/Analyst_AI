@@ -85,6 +85,21 @@ Return ONLY valid JSON.
 
             confirmation = f"Filled nulls in {col} using {strategy}."
 
+        elif action == "drop_columns":
+            cols_to_drop = manipulation_plan.get("columns", [])
+            valid_cols = [c for c in cols_to_drop if c in df.columns]
+            df = df.drop(columns=valid_cols)
+            confirmation = f"Dropped columns: {valid_cols}."
+
+        elif action == "rename_columns":
+            mapping = manipulation_plan.get("mapping", {})
+            df = df.rename(columns={k: v for k, v in mapping.items() if k in df.columns})
+            confirmation = f"Renamed columns: {mapping}."
+
+        elif action == "drop_duplicates":
+            before = len(df)
+            df = df.drop_duplicates()
+            confirmation = f"Removed {before - len(df)} duplicate rows."
 
         else:
             confirmation = "Could not understand the manipulation."

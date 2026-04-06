@@ -1,0 +1,95 @@
+# =========================
+
+# Node.js / JavaScript
+
+# =========================
+
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# =========================
+
+# Environment variables
+
+# =========================
+
+.env
+.env.*
+!.env.example
+
+# =========================
+
+# Build folders
+
+# =========================
+
+dist/
+build/
+.out/
+.next/
+.cache/
+coverage/
+
+# =========================
+
+# Logs
+
+# =========================
+
+logs/
+*.log
+
+# =========================
+
+# OS generated files
+
+# =========================
+
+.DS_Store
+Thumbs.db
+
+# =========================
+
+# Editor / IDE files
+
+# =========================
+
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# =========================
+
+# React / Vite specific
+
+# =========================
+
+vite.config.ts.timestamp-*
+*.local
+
+# =========================
+
+# Backend / uploads
+
+# =========================
+
+uploads/
+temp/
+tmp/
+
+# =========================
+
+# Database
+
+# =========================
+
+*.sqlite
+*.db
+

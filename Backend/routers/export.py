@@ -17,9 +17,18 @@ async def export_csv(session_id: str = "default"):
     if not session:
         raise HTTPException(status_code=400, detail="No data found for this session.")
 
-    df = session.get("manipulated_data") or session.get("cleaned_data")
+    df = session.get("manipulated_data")
     if df is None:
-        raise HTTPException(status_code=404, detail="No cleaned data available. Run /analyze first.")
+        df = session.get("cleaned_data")
+
+    # If no cleaned/manipulated data, perform a quick clean on-the-fly
+    if df is None and "raw_data" in session:
+        from agents.data_cleaner import data_cleaner
+        cleaning_result = data_cleaner(session)
+        df = cleaning_result.get("cleaned_data")
+
+    if df is None:
+        raise HTTPException(status_code=404, detail="No data available. Please upload a file first.")
 
     buffer = io.StringIO()
     df.to_csv(buffer, index=False)
