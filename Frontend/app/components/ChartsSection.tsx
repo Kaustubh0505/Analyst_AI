@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useAnalyst } from "../context/AnalystContext";
 import type { ChartSpec } from "../context/AnalystContext";
 import { analyzeData } from "../lib/api";
@@ -34,6 +34,38 @@ const CHART_TYPE_LABELS: Record<string, string> = {
 function ChartCard({ chart, index, data }: { chart: ChartSpec; index: number; data: any[] }) {
   const color = COLORS[index % COLORS.length];
 
+  // Transform data for histograms if needed
+  const displayData = useMemo(() => {
+    if (chart.type === "histogram" && chart.x) {
+      const values = data.map((d) => Number(d[chart.x])).filter((v) => !isNaN(v));
+      if (values.length === 0) return [];
+
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      const range = max - min;
+      const binCount = 8;
+      const binSize = range === 0 ? 1 : range / binCount;
+
+      const bins = Array.from({ length: binCount }, (_, i) => {
+        const start = min + i * binSize;
+        const end = start + binSize;
+        return {
+          label: range === 0 ? `${start.toFixed(1)}` : `${start.toFixed(1)}-${end.toFixed(1)}`,
+          count: 0,
+        };
+      });
+
+      values.forEach((v) => {
+        const binIndex = range === 0 ? 0 : Math.min(Math.floor((v - min) / binSize), binCount - 1);
+        if (bins[binIndex]) {
+          bins[binIndex].count++;
+        }
+      });
+      return bins;
+    }
+    return data;
+  }, [chart, data]);
+
   return (
     <div className="chart-card" style={{ animationDelay: `${index * 80}ms` }}>
       <div className="chart-card-header">
@@ -50,14 +82,14 @@ function ChartCard({ chart, index, data }: { chart: ChartSpec; index: number; da
       <div className="chart-canvas">
         <ResponsiveContainer width="100%" height={220}>
           {chart.type === "bar" || chart.type === "histogram" ? (
-            <BarChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+            <BarChart data={displayData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-              <XAxis dataKey={chart.x || "x"} tick={{ fill: "#94a3b8", fontSize: 11 }} />
+              <XAxis dataKey={chart.type === "histogram" ? "label" : (chart.x || "x")} tick={{ fill: "#94a3b8", fontSize: 11 }} />
               <YAxis tick={{ fill: "#94a3b8", fontSize: 11 }} />
               <Tooltip
                 contentStyle={{ background: "#1e293b", border: "1px solid #334155", borderRadius: 8, color: "#e2e8f0" }}
               />
-              <Bar dataKey={chart.y || "y"} fill={color} radius={[4, 4, 0, 0]} />
+              <Bar dataKey={chart.type === "histogram" ? "count" : (chart.y || "y")} fill={color} radius={[4, 4, 0, 0]} />
             </BarChart>
           ) : chart.type === "line" ? (
             <LineChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
@@ -85,7 +117,7 @@ function ChartCard({ chart, index, data }: { chart: ChartSpec; index: number; da
                 cx="50%"
                 cy="50%"
                 outerRadius={90}
-                label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
+                label={({ name, percent }: any) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                 labelLine={false}
               >
                 {data.map((_, i) => (
