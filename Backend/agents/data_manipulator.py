@@ -27,7 +27,7 @@ Return ONLY valid JSON.
 """
 
     try:
-        plan_raw = invoke_llm(plan_prompt).strip()
+        plan_raw = invoke_llm(plan_prompt, agent_id=6).strip()
     except Exception as e:
         return {
             "manipulated_data": df,

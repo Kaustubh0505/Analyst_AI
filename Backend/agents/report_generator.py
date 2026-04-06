@@ -62,7 +62,7 @@ Return clean formatted text.
 """
 
     try:
-        report = invoke_llm(prompt)
+        report = invoke_llm(prompt, agent_id=4)
     except Exception as e:
         return {"report": f"Error generating report: {str(e)}"}
 

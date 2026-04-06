@@ -38,7 +38,7 @@ Return ONLY a numbered list:
 """
 
     try:
-        response = invoke_llm(prompt)
+        response = invoke_llm(prompt, agent_id=3)
     except Exception as e:
         return {"insights": [f"LLM Error: {str(e)}"]}
 

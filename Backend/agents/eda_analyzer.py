@@ -26,6 +26,7 @@ def eda_analyzer(state:AnalystState) -> dict:
             col: df[col].value_counts().head(10).to_dict()
             for col in df.select_dtypes(include="object").columns
         },
+        "data_sample": df.head(25).to_dict(orient="records"),
     }
 
     return {"eda_results": eda_results}

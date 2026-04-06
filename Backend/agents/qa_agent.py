@@ -26,7 +26,7 @@ Respond with ONLY one word.
 """
 
     try:
-        intent_raw = invoke_llm(classification_prompt).strip().lower()
+        intent_raw = invoke_llm(classification_prompt, agent_id=5).strip().lower()
     except Exception:
         intent_raw = "question"
 
@@ -74,7 +74,7 @@ Answer:
 """
 
         try:
-            answer = invoke_llm(answer_prompt)
+            answer = invoke_llm(answer_prompt, agent_id=5)
         except Exception as e:
             answer = f"Error generating answer: {str(e)}"
 

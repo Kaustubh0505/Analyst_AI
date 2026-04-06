@@ -25,4 +25,5 @@ async def analyze(session_id: str = "default"):
             "shape": result.get("eda_results", {}).get("shape", {}),
             "columns": result.get("eda_results", {}).get("columns", []),
         },
+        "chart_data": result.get("eda_results", {}).get("data_sample", []),
     }

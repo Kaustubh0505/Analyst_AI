@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { useAnalyst } from "../context/AnalystContext";
 import type { ChartSpec } from "../context/AnalystContext";
+import { analyzeData } from "../lib/api";
 import {
   BarChart,
   Bar,
@@ -29,13 +31,7 @@ const CHART_TYPE_LABELS: Record<string, string> = {
   heatmap: "Heatmap",
 };
 
-function ChartCard({ chart, index }: { chart: ChartSpec; index: number }) {
-  // Generate illustrative placeholder data based on chart spec
-  const placeholderData = Array.from({ length: 7 }, (_, i) => ({
-    [chart.x || "x"]: `Item ${i + 1}`,
-    [chart.y || "y"]: Math.round(Math.random() * 80 + 20),
-  }));
-
+function ChartCard({ chart, index, data }: { chart: ChartSpec; index: number; data: any[] }) {
   const color = COLORS[index % COLORS.length];
 
   return (
@@ -54,7 +50,7 @@ function ChartCard({ chart, index }: { chart: ChartSpec; index: number }) {
       <div className="chart-canvas">
         <ResponsiveContainer width="100%" height={220}>
           {chart.type === "bar" || chart.type === "histogram" ? (
-            <BarChart data={placeholderData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+            <BarChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
               <XAxis dataKey={chart.x || "x"} tick={{ fill: "#94a3b8", fontSize: 11 }} />
               <YAxis tick={{ fill: "#94a3b8", fontSize: 11 }} />
@@ -64,7 +60,7 @@ function ChartCard({ chart, index }: { chart: ChartSpec; index: number }) {
               <Bar dataKey={chart.y || "y"} fill={color} radius={[4, 4, 0, 0]} />
             </BarChart>
           ) : chart.type === "line" ? (
-            <LineChart data={placeholderData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+            <LineChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
               <XAxis dataKey={chart.x || "x"} tick={{ fill: "#94a3b8", fontSize: 11 }} />
               <YAxis tick={{ fill: "#94a3b8", fontSize: 11 }} />
@@ -83,7 +79,7 @@ function ChartCard({ chart, index }: { chart: ChartSpec; index: number }) {
           ) : chart.type === "pie" ? (
             <PieChart>
               <Pie
-                data={placeholderData}
+                data={data}
                 dataKey={chart.y || "y"}
                 nameKey={chart.x || "x"}
                 cx="50%"
@@ -92,8 +88,8 @@ function ChartCard({ chart, index }: { chart: ChartSpec; index: number }) {
                 label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                 labelLine={false}
               >
-                {placeholderData.map((_, i) => (
-                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                {data.map((_, i) => (
+                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
                 ))}
               </Pie>
               <Tooltip
@@ -109,11 +105,11 @@ function ChartCard({ chart, index }: { chart: ChartSpec; index: number }) {
                 contentStyle={{ background: "#1e293b", border: "1px solid #334155", borderRadius: 8, color: "#e2e8f0" }}
                 cursor={{ strokeDasharray: "3 3" }}
               />
-              <Scatter data={placeholderData} fill={color} />
+              <Scatter data={data} fill={color} />
             </ScatterChart>
           ) : (
             // Fallback: bar
-            <BarChart data={placeholderData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+            <BarChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
               <XAxis dataKey={chart.x || "x"} tick={{ fill: "#94a3b8", fontSize: 11 }} />
               <YAxis tick={{ fill: "#94a3b8", fontSize: 11 }} />
@@ -127,21 +123,44 @@ function ChartCard({ chart, index }: { chart: ChartSpec; index: number }) {
       </div>
 
       <p className="chart-note">
-        ℹ️ Charts are rendered with illustrative data. When your dataset rows are available via the backend, real data will populate here.
+        ℹ️ Visualizing top 25 rows from your cleaned dataset.
       </p>
     </div>
   );
 }
 
 export function ChartsSection() {
-  const { charts } = useAnalyst();
+  const { charts, chartData, sessionId, setAnalysisResult } = useAnalyst();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  async function handleRefresh() {
+    if (!sessionId) return;
+    try {
+      setIsRefreshing(true);
+      const res = await analyzeData(sessionId);
+      setAnalysisResult(res);
+    } catch (err) {
+      console.error("Failed to refresh analysis:", err);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }
 
   if (charts.length === 0) {
     return (
       <div className="empty-state">
-        <div className="empty-icon">📊</div>
-        <h3>No charts yet</h3>
-        <p>Upload and analyze a CSV file — the AI will suggest the best visualizations for your data.</p>
+        <div className="empty-icon">{isRefreshing ? "⏳" : "📊"}</div>
+        <h3>{isRefreshing ? "AI agents are working..." : "No charts generated yet"}</h3>
+        <p>
+          {isRefreshing 
+            ? "We're re-analyzing your data to identify better visualizations." 
+            : "The AI didn't find specific trends for charts this time, or the analysis is still finishing."}
+        </p>
+        {sessionId && !isRefreshing && (
+          <button className="btn-secondary" onClick={handleRefresh}>
+            Refetch Analysis ✨
+          </button>
+        )}
       </div>
     );
   }
@@ -153,11 +172,11 @@ export function ChartsSection() {
         <span className="badge">{charts.length} charts</span>
       </div>
       <p className="section-sub">
-        The AI analyzed your dataset and recommends these chart types. Add a <code>/data</code> endpoint to your backend to render with real data.
+        The AI analyzed your dataset and identified these key visualizations.
       </p>
       <div className="charts-grid">
         {charts.map((chart, i) => (
-          <ChartCard key={i} chart={chart} index={i} />
+          <ChartCard key={i} chart={chart} index={i} data={chartData} />
         ))}
       </div>
     </div>

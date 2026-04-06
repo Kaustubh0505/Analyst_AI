@@ -12,5 +12,5 @@ class AnalystState(TypedDict):
     memory:List[dict]
     user_query:str
     query_intent:str
-    manipulation_plan:dict
+    cleaning_report:str
     answer:str

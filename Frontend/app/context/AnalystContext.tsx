@@ -22,6 +22,7 @@ interface AnalystState {
   edaSummary: EdaSummary | null;
   report: string | null;
   downloadAvailable: boolean;
+  chartData: any[];
   setSessionId: (id: string) => void;
   setColumns: (cols: string[]) => void;
   setRows: (n: number) => void;
@@ -41,11 +42,13 @@ export function AnalystProvider({ children }: { children: ReactNode }) {
   const [edaSummary, setEdaSummary] = useState<EdaSummary | null>(null);
   const [report, setReport] = useState<string | null>(null);
   const [downloadAvailable, setDownloadAvailable] = useState(false);
+  const [chartData, setChartData] = useState<any[]>([]);
 
   function setAnalysisResult(result: any) {
     setInsights(result.insights ?? []);
     setCharts(result.charts ?? []);
     setEdaSummary(result.eda_summary ?? null);
+    setChartData(result.chart_data ?? []);
     setDownloadAvailable(true);
   }
 
@@ -60,6 +63,7 @@ export function AnalystProvider({ children }: { children: ReactNode }) {
         edaSummary,
         report,
         downloadAvailable,
+        chartData,
         setSessionId,
         setColumns,
         setRows,

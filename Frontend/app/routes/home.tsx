@@ -27,7 +27,7 @@ const TABS: { id: Tab; icon: string; label: string }[] = [
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>("upload");
-  const { sessionId, insights, charts } = useAnalyst();
+  const { sessionId, insights, charts, downloadAvailable } = useAnalyst();
 
   return (
     <div className="app-shell">
@@ -59,7 +59,7 @@ export default function Home() {
         </nav>
 
         <div className="sidebar-footer">
-          {sessionId && (
+          {downloadAvailable && sessionId && (
             <a
               href={getExportURL(sessionId)}
               className="sidebar-download-btn"
@@ -67,7 +67,7 @@ export default function Home() {
               title="Download the processed dataset"
             >
               <span className="nav-icon">📥</span>
-              <span className="nav-label">Download CSV</span>
+              <span className="nav-label">Download Cleaned CSV</span>
             </a>
           )}
           <div className={`session-indicator ${sessionId ? "connected" : "disconnected"}`}>

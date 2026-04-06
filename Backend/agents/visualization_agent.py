@@ -44,7 +44,7 @@ Return ONLY a valid JSON array:
 """
 
     try:
-        response = invoke_llm(prompt)
+        response = invoke_llm(prompt, agent_id=2)
     except Exception as e:
         return {"charts": [], "error": str(e)}
 
@@ -56,27 +56,56 @@ Return ONLY a valid JSON array:
         except Exception:
             charts = []
     else:
-        charts = []
+        # Try a more aggressive search if [ ] markers weren't found nicely
+        match_alt = re.search(r"(\[.*\])", response, re.DOTALL)
+        if match_alt:
+            try:
+                charts = json.loads(match_alt.group(1))
+            except Exception:
+                charts = []
+        else:
+            charts = []
 
     # Validate charts
     valid_types = {"bar", "line", "scatter", "histogram", "pie", "heatmap"}
-    columns = set(eda_results.get("columns", []))
+    actual_columns = eda_results.get("columns", [])
+    col_map = {c.lower(): c for c in actual_columns}
 
     validated_charts = []
     for chart in charts:
         if not isinstance(chart, dict):
             continue
 
-        if chart.get("type") not in valid_types:
+        ctype = chart.get("type", "").lower()
+        if ctype not in valid_types:
             continue
+        
+        # Ensure type is normalized
+        chart["type"] = ctype
 
         x = chart.get("x")
         y = chart.get("y")
 
-        if x and x not in columns:
-            continue
-        if y and y not in columns:
-            continue
+        # Support list inputs (take first item)
+        if isinstance(x, list) and len(x) > 0: x = x[0]
+        if isinstance(y, list) and len(y) > 0: y = y[0]
+
+        # Case-insensitive column matching for x
+        if isinstance(x, str) and x.lower() in col_map:
+            chart["x"] = col_map[x.lower()]
+        else:
+            continue # x is mandatory
+
+        # Use y if available, validate it case-insensitively
+        if isinstance(y, str) and y.lower() in col_map:
+            chart["y"] = col_map[y.lower()]
+        elif ctype in ["histogram", "pie"]:
+            # y can be optional for these types, we can use a count or let the UI handle it
+            pass
+        else:
+            # If y is missing for bar/line/scatter/heatmap, it's invalid
+            if ctype in ["bar", "line", "scatter", "heatmap"]:
+                continue
 
         validated_charts.append(chart)
 
