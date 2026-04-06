@@ -6,107 +6,171 @@ from utils.llm_client import invoke_llm
 
 def visualization_agent(state: AnalystState) -> dict:
     """
-    Agent 4 — Visualization Agent
-    Suggests the best charts and returns structured JSON specs.
+    Agent 4 — Visualization Agent (Enhanced)
+    Generates high-quality, valid chart suggestions.
     """
 
     eda_results = state["eda_results"]
 
+    # -------------------------------
+    # Prepare EDA JSON (trim if large)
+    # -------------------------------
     eda_json = json.dumps(eda_results, indent=2, default=str)
 
     if len(eda_json) > 8000:
         eda_json = eda_json[:8000] + "..."
 
+    # -------------------------------
+    # 🔥 Improved Prompt
+    # -------------------------------
     prompt = f"""
-You are a senior data visualization expert.
+You are a senior data visualization expert designing charts for a data analyst dashboard.
 
-Based on the EDA results, recommend 3–5 highly informative charts.
+Your goal is to recommend the MOST INSIGHTFUL charts based on the dataset.
 
-Guidelines:
-- Use numeric columns for scatter/line/histogram
-- Use categorical columns for bar/pie charts
-- Use heatmap ONLY for correlations
-- Avoid redundant charts
-- Prefer charts that reveal trends, distributions, or relationships
+-------------------------
+STRICT THINKING PROCESS:
+-------------------------
+For each chart:
+1. Identify column types (numerical, categorical, datetime)
+2. Choose ONLY meaningful column combinations
+3. Ensure the chart reveals trends, patterns, or comparisons
+4. Avoid random or meaningless pairings
 
-EDA Results:
+-------------------------
+CHART RULES:
+-------------------------
+- histogram → distribution of a numeric column
+- bar → categorical vs numeric comparison
+- line → trends over time (requires datetime)
+- scatter → relationship between two numeric columns
+- pie → proportions (ONLY if categories < 6)
+- heatmap → correlation matrix (numeric columns only)
+
+-------------------------
+STRICT CONSTRAINTS:
+-------------------------
+- ONLY use existing column names
+- DO NOT hallucinate columns
+- DO NOT repeat similar charts
+- Each chart must provide UNIQUE insight
+- Prefer high-variance or important columns
+
+-------------------------
+EDA RESULTS:
+-------------------------
 {eda_json}
 
-Return ONLY a valid JSON array:
+-------------------------
+OUTPUT FORMAT (STRICT JSON ONLY):
+-------------------------
 [
   {{
     "type": "bar|line|scatter|histogram|pie|heatmap",
-    "x": "...",
-    "y": "...",
-    "title": "..."
+    "x": "column_name",
+    "y": "column_name (if applicable)",
+    "title": "Insightful chart title"
   }}
 ]
+
+Return ONLY JSON. No explanation.
 """
 
+    # -------------------------------
+    # Call LLM
+    # -------------------------------
     try:
         response = invoke_llm(prompt, agent_id=2)
+        # Debug (optional)
+        # print("RAW RESPONSE:\n", response)
     except Exception as e:
         return {"charts": [], "error": str(e)}
 
+    # -------------------------------
     # Extract JSON safely
-    match = re.search(r"\[.*\]", response, re.DOTALL)
-    if match:
-        try:
-            charts = json.loads(match.group())
-        except Exception:
-            charts = []
-    else:
-        # Try a more aggressive search if [ ] markers weren't found nicely
-        match_alt = re.search(r"(\[.*\])", response, re.DOTALL)
-        if match_alt:
+    # -------------------------------
+    charts = []
+
+    try:
+        # Try direct parse
+        charts = json.loads(response)
+    except Exception:
+        # Fallback regex extraction
+        match = re.search(r"\[.*\]", response, re.DOTALL)
+        if match:
             try:
-                charts = json.loads(match_alt.group(1))
+                charts = json.loads(match.group())
             except Exception:
                 charts = []
         else:
             charts = []
 
-    # Validate charts
+    # -------------------------------
+    # Validation
+    # -------------------------------
     valid_types = {"bar", "line", "scatter", "histogram", "pie", "heatmap"}
     actual_columns = eda_results.get("columns", [])
+
+    # Case-insensitive mapping
     col_map = {c.lower(): c for c in actual_columns}
 
     validated_charts = []
+    seen = set()
+
     for chart in charts:
         if not isinstance(chart, dict):
             continue
 
         ctype = chart.get("type", "").lower()
+
         if ctype not in valid_types:
             continue
-        
-        # Ensure type is normalized
-        chart["type"] = ctype
 
         x = chart.get("x")
         y = chart.get("y")
 
-        # Support list inputs (take first item)
-        if isinstance(x, list) and len(x) > 0: x = x[0]
-        if isinstance(y, list) and len(y) > 0: y = y[0]
+        # Normalize x
+        if isinstance(x, list) and x:
+            x = x[0]
 
-        # Case-insensitive column matching for x
-        if isinstance(x, str) and x.lower() in col_map:
-            chart["x"] = col_map[x.lower()]
-        else:
-            continue # x is mandatory
+        if not isinstance(x, str) or x.lower() not in col_map:
+            continue
 
-        # Use y if available, validate it case-insensitively
+        x = col_map[x.lower()]
+
+        # Normalize y
+        if isinstance(y, list) and y:
+            y = y[0]
+
         if isinstance(y, str) and y.lower() in col_map:
-            chart["y"] = col_map[y.lower()]
-        elif ctype in ["histogram", "pie"]:
-            # y can be optional for these types, we can use a count or let the UI handle it
-            pass
+            y = col_map[y.lower()]
         else:
-            # If y is missing for bar/line/scatter/heatmap, it's invalid
-            if ctype in ["bar", "line", "scatter", "heatmap"]:
+            y = None
+
+        # Chart-specific validation
+        if ctype in ["bar", "line", "scatter"]:
+            if not y:
                 continue
 
-        validated_charts.append(chart)
+        if ctype == "heatmap":
+            # Allow heatmap without x/y (UI can handle correlation matrix)
+            x, y = None, None
+
+        if ctype in ["histogram", "pie"]:
+            # y optional
+            pass
+
+        # Avoid duplicates
+        key = (ctype, x, y)
+        if key in seen:
+            continue
+        seen.add(key)
+
+        validated_charts.append({
+            "type": ctype,
+            "x": x,
+            "y": y,
+            "title": chart.get("title", f"{ctype.title()} Chart")
+        })
 
     return {"charts": validated_charts}

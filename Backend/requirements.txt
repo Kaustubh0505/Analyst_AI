@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+pandas
+numpy
+python-dotenv
+langchain-google-genai
+langgraph
+pydantic
+python-multipart
+google-generativeai
