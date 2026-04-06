@@ -28,7 +28,7 @@ export function Welcome() {
         formData.append("file", file);
       }
 
-      const res = await axios.post(`${url}/click`, formData, {
+      const res = await axios.post(`${url}/upload`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },

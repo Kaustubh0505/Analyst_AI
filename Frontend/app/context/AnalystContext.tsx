@@ -1,0 +1,80 @@
+import { createContext, useContext, useState } from "react";
+import type { ReactNode } from "react";
+
+export interface ChartSpec {
+  type: "bar" | "line" | "scatter" | "histogram" | "pie" | "heatmap";
+  x: string;
+  y: string;
+  title: string;
+}
+
+export interface EdaSummary {
+  shape?: { rows: number; cols: number };
+  columns?: string[];
+}
+
+interface AnalystState {
+  sessionId: string | null;
+  columns: string[];
+  rows: number | null;
+  insights: string[];
+  charts: ChartSpec[];
+  edaSummary: EdaSummary | null;
+  report: string | null;
+  downloadAvailable: boolean;
+  setSessionId: (id: string) => void;
+  setColumns: (cols: string[]) => void;
+  setRows: (n: number) => void;
+  setAnalysisResult: (result: any) => void;
+  setReport: (r: string) => void;
+  setDownloadAvailable: (v: boolean) => void;
+}
+
+const AnalystContext = createContext<AnalystState | null>(null);
+
+export function AnalystProvider({ children }: { children: ReactNode }) {
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [columns, setColumns] = useState<string[]>([]);
+  const [rows, setRows] = useState<number | null>(null);
+  const [insights, setInsights] = useState<string[]>([]);
+  const [charts, setCharts] = useState<ChartSpec[]>([]);
+  const [edaSummary, setEdaSummary] = useState<EdaSummary | null>(null);
+  const [report, setReport] = useState<string | null>(null);
+  const [downloadAvailable, setDownloadAvailable] = useState(false);
+
+  function setAnalysisResult(result: any) {
+    setInsights(result.insights ?? []);
+    setCharts(result.charts ?? []);
+    setEdaSummary(result.eda_summary ?? null);
+    setDownloadAvailable(true);
+  }
+
+  return (
+    <AnalystContext.Provider
+      value={{
+        sessionId,
+        columns,
+        rows,
+        insights,
+        charts,
+        edaSummary,
+        report,
+        downloadAvailable,
+        setSessionId,
+        setColumns,
+        setRows,
+        setAnalysisResult,
+        setReport,
+        setDownloadAvailable,
+      }}
+    >
+      {children}
+    </AnalystContext.Provider>
+  );
+}
+
+export function useAnalyst() {
+  const ctx = useContext(AnalystContext);
+  if (!ctx) throw new Error("useAnalyst must be used inside <AnalystProvider>");
+  return ctx;
+}
