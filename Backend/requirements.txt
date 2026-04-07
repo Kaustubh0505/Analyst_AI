@@ -8,6 +8,7 @@ numpy==1.26.4
 python-dotenv==1.0.1
 pydantic==2.7.4
 python-multipart==0.0.9
+setuptools
 
 langchain-google-genai==1.0.5
 langgraph==0.2.34
