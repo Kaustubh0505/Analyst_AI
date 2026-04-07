@@ -31,10 +31,62 @@ const CHART_TYPE_LABELS: Record<string, string> = {
   heatmap: "Heatmap",
 };
 
+function CorrelationHeatmap({ correlation }: { correlation: Record<string, Record<string, number>> }) {
+  const cols = Object.keys(correlation);
+  if (cols.length === 0) return <div className="chat-empty">No correlation data available</div>;
+
+  return (
+    <div style={{ overflowX: "auto", paddingBottom: "10px" }}>
+      <table style={{ borderCollapse: "collapse", width: "100%", fontSize: "11px" }}>
+        <thead>
+          <tr>
+            <th style={{ padding: "4px" }}></th>
+            {cols.map((col) => (
+              <th key={col} style={{ padding: "4px", textAlign: "center", transform: "rotate(-45deg)", height: "60px", whiteSpace: "nowrap", borderBottom: "1px solid #e2e8f0" }}>
+                {col.length > 12 ? col.substring(0, 10) + ".." : col}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {cols.map((rowCol) => (
+            <tr key={rowCol}>
+              <td style={{ padding: "4px", fontWeight: "bold", borderRight: "1px solid #e2e8f0" }}>{rowCol}</td>
+              {cols.map((colCol) => {
+                const val = correlation[rowCol][colCol] ?? 0;
+                // Color scale: Red (-1) -> White (0) -> Blue (1)
+                const opacity = Math.abs(val);
+                const color = val > 0 ? `rgba(99, 102, 241, ${opacity})` : `rgba(239, 68, 68, ${opacity})`;
+                return (
+                  <td
+                    key={colCol}
+                    title={`${rowCol} vs ${colCol}: ${val.toFixed(3)}`}
+                    style={{
+                      background: color,
+                      width: "30px",
+                      height: "30px",
+                      border: "1px solid #f1f5f9",
+                      textAlign: "center",
+                      color: opacity > 0.5 ? "white" : "inherit",
+                    }}
+                  >
+                    {val.toFixed(2)}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function ChartCard({ chart, index, data }: { chart: ChartSpec; index: number; data: any[] }) {
+  const { edaSummary } = useAnalyst();
   const color = COLORS[index % COLORS.length];
 
-  // Transform data for histograms if needed
+  // Transform data for histograms and pie charts if needed
   const displayData = useMemo(() => {
     if (chart.type === "histogram" && chart.x) {
       const values = data.map((d) => Number(d[chart.x])).filter((v) => !isNaN(v));
@@ -63,6 +115,23 @@ function ChartCard({ chart, index, data }: { chart: ChartSpec; index: number; da
       });
       return bins;
     }
+
+    if (chart.type === "pie" && chart.x) {
+      const grouped: Record<string, number> = {};
+      const yKey = chart.y || "y";
+
+      data.forEach((row) => {
+        const key = String(row[chart.x] || "Unknown");
+        const val = row[yKey] !== undefined ? Number(row[yKey]) : 1;
+        grouped[key] = (grouped[key] || 0) + (isNaN(val) ? 1 : val);
+      });
+
+      return Object.entries(grouped).map(([name, value]) => ({
+        [chart.x]: name,
+        [yKey]: value,
+      }));
+    }
+
     return data;
   }, [chart, data]);
 
@@ -72,7 +141,7 @@ function ChartCard({ chart, index, data }: { chart: ChartSpec; index: number; da
         <div>
           <h3 className="chart-title">{chart.title}</h3>
           <div className="chart-meta">
-            <span className="tag">{CHART_TYPE_LABELS[chart.type] ?? chart.type}</span>
+            <span className="badge">{CHART_TYPE_LABELS[chart.type] ?? chart.type}</span>
             {chart.x && <span className="tag tag-dim">X: {chart.x}</span>}
             {chart.y && <span className="tag tag-dim">Y: {chart.y}</span>}
           </div>
@@ -80,82 +149,88 @@ function ChartCard({ chart, index, data }: { chart: ChartSpec; index: number; da
       </div>
 
       <div className="chart-canvas">
-        <ResponsiveContainer width="100%" height={220}>
-          {chart.type === "bar" || chart.type === "histogram" ? (
-            <BarChart data={displayData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-              <XAxis dataKey={chart.type === "histogram" ? "label" : (chart.x || "x")} tick={{ fill: "#94a3b8", fontSize: 11 }} />
-              <YAxis tick={{ fill: "#94a3b8", fontSize: 11 }} />
-              <Tooltip
-                contentStyle={{ background: "#1e293b", border: "1px solid #334155", borderRadius: 8, color: "#e2e8f0" }}
-              />
-              <Bar dataKey={chart.type === "histogram" ? "count" : (chart.y || "y")} fill={color} radius={[4, 4, 0, 0]} />
-            </BarChart>
-          ) : chart.type === "line" ? (
-            <LineChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-              <XAxis dataKey={chart.x || "x"} tick={{ fill: "#94a3b8", fontSize: 11 }} />
-              <YAxis tick={{ fill: "#94a3b8", fontSize: 11 }} />
-              <Tooltip
-                contentStyle={{ background: "#1e293b", border: "1px solid #334155", borderRadius: 8, color: "#e2e8f0" }}
-              />
-              <Line
-                type="monotone"
-                dataKey={chart.y || "y"}
-                stroke={color}
-                strokeWidth={2}
-                dot={{ fill: color, r: 4 }}
-                activeDot={{ r: 6 }}
-              />
-            </LineChart>
-          ) : chart.type === "pie" ? (
-            <PieChart>
-              <Pie
-                data={data}
-                dataKey={chart.y || "y"}
-                nameKey={chart.x || "x"}
-                cx="50%"
-                cy="50%"
-                outerRadius={90}
-                label={({ name, percent }: any) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
-                labelLine={false}
-              >
-                {data.map((_, i) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip
-                contentStyle={{ background: "#1e293b", border: "1px solid #334155", borderRadius: 8, color: "#e2e8f0" }}
-              />
-            </PieChart>
-          ) : chart.type === "scatter" ? (
-            <ScatterChart margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-              <XAxis dataKey={chart.x || "x"} name={chart.x} tick={{ fill: "#94a3b8", fontSize: 11 }} />
-              <YAxis dataKey={chart.y || "y"} name={chart.y} tick={{ fill: "#94a3b8", fontSize: 11 }} />
-              <Tooltip
-                contentStyle={{ background: "#1e293b", border: "1px solid #334155", borderRadius: 8, color: "#e2e8f0" }}
-                cursor={{ strokeDasharray: "3 3" }}
-              />
-              <Scatter data={data} fill={color} />
-            </ScatterChart>
-          ) : (
-            // Fallback: bar
-            <BarChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-              <XAxis dataKey={chart.x || "x"} tick={{ fill: "#94a3b8", fontSize: 11 }} />
-              <YAxis tick={{ fill: "#94a3b8", fontSize: 11 }} />
-              <Tooltip
-                contentStyle={{ background: "#1e293b", border: "1px solid #334155", borderRadius: 8, color: "#e2e8f0" }}
-              />
-              <Bar dataKey={chart.y || "y"} fill={color} radius={[4, 4, 0, 0]} />
-            </BarChart>
-          )}
-        </ResponsiveContainer>
+        {chart.type === "heatmap" ? (
+          <CorrelationHeatmap correlation={edaSummary?.correlation ?? {}} />
+        ) : (
+          <ResponsiveContainer width="100%" height={chart.type === "pie" ? 280 : 220}>
+            {chart.type === "bar" || chart.type === "histogram" ? (
+              <BarChart data={displayData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
+                <XAxis dataKey={chart.type === "histogram" ? "label" : (chart.x || "x")} tick={{ fill: "#64748b", fontSize: 11 }} />
+                <YAxis tick={{ fill: "#64748b", fontSize: 11 }} />
+                <Tooltip
+                  contentStyle={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 8, color: "#0f172a", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }}
+                />
+                <Bar dataKey={chart.type === "histogram" ? "count" : (chart.y || "y")} fill={color} radius={[4, 4, 0, 0]} />
+              </BarChart>
+            ) : chart.type === "line" ? (
+              <LineChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
+                <XAxis dataKey={chart.x || "x"} tick={{ fill: "#64748b", fontSize: 11 }} />
+                <YAxis tick={{ fill: "#64748b", fontSize: 11 }} />
+                <Tooltip
+                  contentStyle={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 8, color: "#0f172a", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey={chart.y || "y"}
+                  stroke={color}
+                  strokeWidth={2}
+                  dot={{ fill: color, r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+              </LineChart>
+            ) : chart.type === "pie" ? (
+              <PieChart>
+                <Pie
+                  data={displayData}
+                  dataKey={chart.y || "y"}
+                  nameKey={chart.x || "x"}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={85}
+                  paddingAngle={2}
+                  label={({ percent }: any) => `${((percent ?? 0) * 100).toFixed(0)}%`}
+                >
+                  {displayData.map((_, i) => (
+                      <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="rgba(255,255,255,0.2)" />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 8, color: "#0f172a", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }}
+                />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: "11px", paddingTop: "10px" }} />
+              </PieChart>
+            ) : chart.type === "scatter" ? (
+              <ScatterChart margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
+                <XAxis dataKey={chart.x || "x"} name={chart.x} tick={{ fill: "#64748b", fontSize: 11 }} />
+                <YAxis dataKey={chart.y || "y"} name={chart.y} tick={{ fill: "#64748b", fontSize: 11 }} />
+                <Tooltip
+                  contentStyle={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 8, color: "#0f172a", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }}
+                  cursor={{ strokeDasharray: "3 3" }}
+                />
+                <Scatter data={data} fill={color} />
+              </ScatterChart>
+            ) : (
+              // Fallback: bar
+              <BarChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
+                <XAxis dataKey={chart.x || "x"} tick={{ fill: "#64748b", fontSize: 11 }} />
+                <YAxis tick={{ fill: "#64748b", fontSize: 11 }} />
+                <Tooltip
+                  contentStyle={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 8, color: "#0f172a", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }}
+                />
+                <Bar dataKey={chart.y || "y"} fill={color} radius={[4, 4, 0, 0]} />
+              </BarChart>
+            )}
+          </ResponsiveContainer>
+        )}
       </div>
 
       <p className="chart-note">
-        ℹ️ Visualizing top 25 rows from your cleaned dataset.
+        ℹ️ {chart.type === "heatmap" ? "Showing full correlation matrix between all numeric variables." : "Visualizing top 25 rows from your cleaned dataset."}
       </p>
     </div>
   );

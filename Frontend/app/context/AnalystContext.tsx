@@ -11,6 +11,7 @@ export interface ChartSpec {
 export interface EdaSummary {
   shape?: { rows: number; cols: number };
   columns?: string[];
+  correlation?: Record<string, Record<string, number>>;
 }
 
 interface AnalystState {
