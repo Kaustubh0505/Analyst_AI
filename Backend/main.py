@@ -10,12 +10,16 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173","http://localhost:5174","https://analystai-five.vercel.app","https://analystai.kaustubh.codes"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "https://analystai-five.vercel.app",
+        "https://analystai.kaustubh.codes"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 app.include_router(upload_router)
 app.include_router(analyze_router)
