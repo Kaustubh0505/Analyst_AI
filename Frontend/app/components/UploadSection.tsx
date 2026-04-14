@@ -64,7 +64,6 @@ export function UploadSection({ onDone }: { onDone: () => void }) {
   return (
     <div className="upload-wrapper">
       <div className="upload-hero">
-        <div className="hero-icon">🧠</div>
         <h2 className="hero-title">Upload your dataset</h2>
         <p className="hero-sub">
           Drop a CSV file and our AI agents will run a full analysis — insights,
