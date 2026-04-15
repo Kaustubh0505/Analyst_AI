@@ -106,6 +106,7 @@ export function UploadSection({ onDone }: { onDone: () => void }) {
             <div className="drop-icon">☁️</div>
             <p className="drop-main">Drag & drop your CSV here</p>
             <p className="drop-sub">or click to browse files</p>
+            <p className="drop-sub">Not more than 10 mb</p>
           </div>
         )}
       </div>
