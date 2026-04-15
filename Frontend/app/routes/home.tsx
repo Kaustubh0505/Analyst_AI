@@ -27,12 +27,25 @@ const TABS: { id: Tab; icon: string; label: string }[] = [
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>("upload");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const { sessionId, insights, charts, downloadAvailable } = useAnalyst();
+
+  function handleTabChange(tab: Tab) {
+    setActiveTab(tab);
+    setSidebarOpen(false); // close sidebar on mobile after nav
+  }
 
   return (
     <div className="app-shell">
+      {/* Sidebar overlay (mobile) */}
+      <div
+        className={`sidebar-overlay ${sidebarOpen ? "" : "hidden"}`}
+        onClick={() => setSidebarOpen(false)}
+        aria-hidden="true"
+      />
+
       {/* Sidebar */}
-      <aside className="sidebar">
+      <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sidebar-brand">
           <span className="brand-logo">🧠</span>
           <span className="brand-name">Analyst AI</span>
@@ -44,7 +57,7 @@ export default function Home() {
               key={tab.id}
               id={`tab-${tab.id}`}
               className={`nav-item ${activeTab === tab.id ? "active" : ""}`}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
             >
               <span className="nav-icon">{tab.icon}</span>
               <span className="nav-label">{tab.label}</span>
@@ -82,6 +95,15 @@ export default function Home() {
       <main className="main-content">
         {/* Top bar */}
         <header className="topbar">
+          {/* Hamburger — visible only on mobile via CSS */}
+          <button
+            className="hamburger-btn"
+            aria-label="Open menu"
+            onClick={() => setSidebarOpen((o) => !o)}
+          >
+            ☰
+          </button>
+
           <div className="topbar-title">
             {TABS.find((t) => t.id === activeTab)?.icon}{" "}
             {TABS.find((t) => t.id === activeTab)?.label}
@@ -104,6 +126,29 @@ export default function Home() {
           {activeTab === "report"   && <ReportSection />}
         </div>
       </main>
+
+      {/* Bottom nav — visible only on mobile via CSS */}
+      <nav className="bottom-nav" aria-label="Mobile navigation">
+        <div className="bottom-nav-inner">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              className={`bottom-nav-item ${activeTab === tab.id ? "active" : ""}`}
+              onClick={() => handleTabChange(tab.id)}
+              aria-label={tab.label}
+            >
+              <span className="bn-icon">{tab.icon}</span>
+              <span>{tab.label}</span>
+              {tab.id === "insights" && insights.length > 0 && (
+                <span className="bn-count">{insights.length}</span>
+              )}
+              {tab.id === "charts" && charts.length > 0 && (
+                <span className="bn-count">{charts.length}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      </nav>
     </div>
   );
 }

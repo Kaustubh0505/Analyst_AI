@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { queryData, getExportURL } from "../lib/api";
 import { useAnalyst } from "../context/AnalystContext";
+import { renderMarkdown } from "../lib/renderMarkdown";
 
 interface QAEntry {
   question: string;
@@ -117,7 +118,7 @@ export function QuerySection() {
                     {INTENT_ICONS[entry.intent] ?? "💬"} {entry.intent}
                   </span>
                 </div>
-                <p className="bubble-answer">{entry.answer}</p>
+                <p className="bubble-answer">{renderMarkdown(entry.answer)}</p>
                 {entry.download_available && sessionId && (
                   <a
                     className="download-link"

@@ -1,4 +1,5 @@
 import { useAnalyst } from "../context/AnalystContext";
+import { renderMarkdown } from "../lib/renderMarkdown";
 
 export function InsightsSection() {
   const { insights, edaSummary, columns, rows } = useAnalyst();
@@ -50,7 +51,7 @@ export function InsightsSection() {
         {insights.map((insight, i) => (
           <div key={i} className="insight-card" style={{ animationDelay: `${i * 60}ms` }}>
             <div className="insight-number">{String(i + 1).padStart(2, "0")}</div>
-            <p className="insight-text">{insight}</p>
+            <p className="insight-text">{renderMarkdown(insight)}</p>
           </div>
         ))}
       </div>

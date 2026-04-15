@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { fetchReport } from "../lib/api";
 import { useAnalyst } from "../context/AnalystContext";
+import { renderMarkdown } from "../lib/renderMarkdown";
 
 export function ReportSection() {
   const { sessionId, report, setReport } = useAnalyst();
@@ -85,7 +86,7 @@ export function ReportSection() {
           <div className="report-sections">
             {report.split(/\n(?=\d+\.\s)/).map((section, i) => (
               <div key={i} className="report-section-card">
-                <pre className="report-text">{section.trim()}</pre>
+                <p className="report-text">{renderMarkdown(section.trim())}</p>
               </div>
             ))}
           </div>
