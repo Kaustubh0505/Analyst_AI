@@ -1,5 +1,5 @@
 import type { Route } from "./+types/home";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { UploadSection } from "../components/UploadSection";
 import { InsightsSection } from "../components/InsightsSection";
 import { ChartsSection } from "../components/ChartsSection";
@@ -25,10 +25,33 @@ const TABS: { id: Tab; icon: string; label: string }[] = [
   { id: "report",   icon: "📄", label: "Report"   },
 ];
 
+const SAMPLE_DATASETS = [
+  { name: "Walmart Sales", file: "Walmart.csv", icon: "🛒", description: "Retail sales dataset" },
+];
+
 export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>("upload");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [samplesOpen, setSamplesOpen] = useState(false);
+  const [preloadFile, setPreloadFile] = useState<File | null>(null);
+  const [loadingSample, setLoadingSample] = useState<string | null>(null);
   const { sessionId, insights, charts, downloadAvailable } = useAnalyst();
+
+  const loadSample = useCallback(async (filename: string) => {
+    setLoadingSample(filename);
+    try {
+      const res = await fetch(`/${filename}`);
+      const blob = await res.blob();
+      const file = new File([blob], filename, { type: "text/csv" });
+      setPreloadFile(file);
+      setActiveTab("upload");
+      setSidebarOpen(false);
+    } catch {
+      alert("Could not load sample dataset. Please try again.");
+    } finally {
+      setLoadingSample(null);
+    }
+  }, []);
 
   function handleTabChange(tab: Tab) {
     setActiveTab(tab);
@@ -70,6 +93,46 @@ export default function Home() {
             </button>
           ))}
         </nav>
+
+        {/* Sample Datasets Section */}
+        <div className="sidebar-samples">
+          <button
+            id="sidebar-samples-toggle"
+            className="samples-toggle"
+            onClick={() => setSamplesOpen((o) => !o)}
+            aria-expanded={samplesOpen}
+          >
+            <span className="nav-icon">🗂️</span>
+            <span className="nav-label">Sample Datasets</span>
+            <span className={`samples-chevron ${samplesOpen ? "open" : ""}`}>›</span>
+          </button>
+
+          {samplesOpen && (
+            <div className="samples-list">
+              {SAMPLE_DATASETS.map((ds) => (
+                <button
+                  key={ds.file}
+                  id={`sample-${ds.file}`}
+                  className="sample-item"
+                  onClick={() => loadSample(ds.file)}
+                  disabled={loadingSample === ds.file}
+                  title={ds.description}
+                >
+                  <span className="sample-icon">{ds.icon}</span>
+                  <div className="sample-meta">
+                    <span className="sample-name">{ds.name}</span>
+                    <span className="sample-desc">{ds.description}</span>
+                  </div>
+                  {loadingSample === ds.file ? (
+                    <span className="sample-loading">⏳</span>
+                  ) : (
+                    <span className="sample-arrow">↑</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         <div className="sidebar-footer">
           {downloadAvailable && sessionId && (
@@ -118,7 +181,10 @@ export default function Home() {
         {/* Panels */}
         <div className="panel">
           {activeTab === "upload" && (
-            <UploadSection onDone={() => setActiveTab("insights")} />
+            <UploadSection
+              onDone={() => setActiveTab("insights")}
+              preloadFile={preloadFile}
+            />
           )}
           {activeTab === "insights" && <InsightsSection />}
           {activeTab === "charts"   && <ChartsSection />}

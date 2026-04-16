@@ -1,10 +1,16 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { uploadCSV, analyzeData } from "../lib/api";
 import { useAnalyst } from "../context/AnalystContext";
 
 type Status = "idle" | "uploading" | "analyzing" | "done" | "error";
 
-export function UploadSection({ onDone }: { onDone: () => void }) {
+export function UploadSection({
+  onDone,
+  preloadFile,
+}: {
+  onDone: () => void;
+  preloadFile?: File | null;
+}) {
   const { setSessionId, setColumns, setRows, setAnalysisResult } = useAnalyst();
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<Status>("idle");
@@ -12,6 +18,15 @@ export function UploadSection({ onDone }: { onDone: () => void }) {
   const [progress, setProgress] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // When a sample dataset is pre-loaded by the parent, inject it into the zone
+  useEffect(() => {
+    if (preloadFile) {
+      setFile(preloadFile);
+      setStatus("idle");
+      setErrorMsg("");
+    }
+  }, [preloadFile]);
 
   const handleFile = useCallback((f: File) => {
     if (!f.name.endsWith(".csv")) {
@@ -136,7 +151,7 @@ export function UploadSection({ onDone }: { onDone: () => void }) {
         disabled={!file || isLoading}
       >
         {status === "uploading"
-          ? "Uploading…"
+          ? "Backend Restarting This may take time"
           : status === "analyzing"
           ? "Analyzing with AI…"
           : "Upload & Analyze ✨"}
