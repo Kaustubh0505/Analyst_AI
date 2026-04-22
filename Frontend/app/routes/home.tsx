@@ -150,7 +150,7 @@ export default function Home() {
             <span className="session-dot" />
             {sessionId ? "Session active" : "No session"}
           </div>
-          <p className="sidebar-tagline">Powered by LangGraph + Gemini</p>
+          <p className="sidebar-tagline">Powered by LangGraph + Groq</p>
         </div>
       </aside>
 

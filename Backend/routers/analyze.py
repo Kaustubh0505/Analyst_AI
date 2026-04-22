@@ -18,13 +18,21 @@ async def analyze(session_id: str = "default"):
     # Store results back into the session
     _sessions[session_id].update(result)
 
+    # Extract cleaned data for charting (up to 5000 rows for performance)
+    cleaned_df = result.get("cleaned_data")
+    chart_data = []
+    if cleaned_df is not None:
+        # Convert to records, limit to 5000 rows
+        chart_data = cleaned_df.head(5000).to_dict(orient="records")
+
     return {
         "insights": result.get("insights", []),
         "charts": result.get("charts", []),
+        "aggregated_charts": result.get("aggregated_charts", []), # New aggregated data
+        "grouped_insights": result.get("grouped_insights", []),   # New insights from discovery
         "eda_summary": {
             "shape": result.get("eda_results", {}).get("shape", {}),
             "columns": result.get("eda_results", {}).get("columns", []),
             "correlation": result.get("eda_results", {}).get("correlation", {}),
         },
-        "chart_data": result.get("eda_results", {}).get("data_sample", []),
     }

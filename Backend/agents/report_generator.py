@@ -12,6 +12,7 @@ def report_generator(state: AnalystState) -> dict:
     insights = state.get("insights", [])
     eda_results = state.get("eda_results", {})
     charts = state.get("charts", [])
+    grouped_insights = state.get("grouped_insights", [])
 
     # -------------------------------
     # Truncate large inputs
@@ -32,6 +33,8 @@ def report_generator(state: AnalystState) -> dict:
         f"{i+1}. {insight}" if not insight.strip().startswith(str(i+1)) else insight
         for i, insight in enumerate(insights)
     )
+    
+    grouped_insights_text = "\n".join(grouped_insights)
 
     # -------------------------------
     # 🔥 Enhanced Prompt
@@ -45,6 +48,9 @@ You are a Senior Data Analyst and Business Intelligence Manager. Your goal is to
 
 ### CONTEXT: KEY INSIGHTS
 {insight_text}
+
+### CONTEXT: GROUPED DISCOVERY FINDINGS
+{grouped_insights_text}
 
 ### CONTEXT: VISUALIZATIONS
 {charts_json}

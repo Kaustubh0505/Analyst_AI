@@ -7,6 +7,7 @@ from agents.visualization_agent import visualization_agent
 from agents.report_generator import report_generator
 from agents.qa_agent import qa_agent
 from agents.data_manipulator import data_manipulator
+from agents.aggregator_agent import aggregator_agent
 
 def route_query(state: AnalystState) -> str:
     """Conditional router: after qa_agent classifies intent, decide next node."""
@@ -25,13 +26,15 @@ def build_analysis_graph():
     graph.add_node("eda_analyzer", eda_analyzer)
     graph.add_node("insight_generator", insight_generator)
     graph.add_node("visualization_agent", visualization_agent)
+    graph.add_node("aggregator_agent", aggregator_agent)
     graph.add_node("report_generator", report_generator)
 
     graph.set_entry_point("data_cleaner")
     graph.add_edge("data_cleaner", "eda_analyzer")
     graph.add_edge("eda_analyzer", "insight_generator")
     graph.add_edge("insight_generator", "visualization_agent")
-    graph.add_edge("visualization_agent", "report_generator")
+    graph.add_edge("visualization_agent", "aggregator_agent")
+    graph.add_edge("aggregator_agent", "report_generator")
     graph.add_edge("report_generator", END)
 
     return graph.compile()

@@ -82,58 +82,14 @@ function CorrelationHeatmap({ correlation }: { correlation: Record<string, Recor
   );
 }
 
-function ChartCard({ chart, index, data }: { chart: ChartSpec; index: number; data: any[] }) {
+function ChartCard({ chartObj, index }: { chartObj: any; index: number }) {
   const { edaSummary } = useAnalyst();
+  const chart = chartObj.spec;
+  const data = chartObj.data;
   const color = COLORS[index % COLORS.length];
 
-  // Transform data for histograms and pie charts if needed
-  const displayData = useMemo(() => {
-    if (chart.type === "histogram" && chart.x) {
-      const values = data.map((d) => Number(d[chart.x])).filter((v) => !isNaN(v));
-      if (values.length === 0) return [];
-
-      const min = Math.min(...values);
-      const max = Math.max(...values);
-      const range = max - min;
-      const binCount = 8;
-      const binSize = range === 0 ? 1 : range / binCount;
-
-      const bins = Array.from({ length: binCount }, (_, i) => {
-        const start = min + i * binSize;
-        const end = start + binSize;
-        return {
-          label: range === 0 ? `${start.toFixed(1)}` : `${start.toFixed(1)}-${end.toFixed(1)}`,
-          count: 0,
-        };
-      });
-
-      values.forEach((v) => {
-        const binIndex = range === 0 ? 0 : Math.min(Math.floor((v - min) / binSize), binCount - 1);
-        if (bins[binIndex]) {
-          bins[binIndex].count++;
-        }
-      });
-      return bins;
-    }
-
-    if (chart.type === "pie" && chart.x) {
-      const grouped: Record<string, number> = {};
-      const yKey = chart.y || "y";
-
-      data.forEach((row) => {
-        const key = String(row[chart.x] || "Unknown");
-        const val = row[yKey] !== undefined ? Number(row[yKey]) : 1;
-        grouped[key] = (grouped[key] || 0) + (isNaN(val) ? 1 : val);
-      });
-
-      return Object.entries(grouped).map(([name, value]) => ({
-        [chart.x]: name,
-        [yKey]: value,
-      }));
-    }
-
-    return data;
-  }, [chart, data]);
+  // Data should already be pre-aggregated from the backend Aggregator Agent
+  const displayData = data;
 
   return (
     <div className="chart-card" style={{ animationDelay: `${index * 80}ms` }}>
@@ -230,7 +186,7 @@ function ChartCard({ chart, index, data }: { chart: ChartSpec; index: number; da
       </div>
 
       <p className="chart-note">
-        ℹ️ {chart.type === "heatmap" ? "Showing full correlation matrix between all numeric variables." : "Visualizing top 25 rows from your cleaned dataset."}
+        ℹ️ {chart.type === "heatmap" ? "Showing full correlation matrix between all numeric variables." : "Visualizing pre-aggregated trends using the full dataset."}
       </p>
     </div>
   );
@@ -282,8 +238,8 @@ export function ChartsSection() {
         The AI analyzed your dataset and identified these key visualizations.
       </p>
       <div className="charts-grid">
-        {charts.map((chart, i) => (
-          <ChartCard key={i} chart={chart} index={i} data={chartData} />
+        {charts.map((chartObj, i) => (
+          <ChartCard key={i} chartObj={chartObj} index={i} />
         ))}
       </div>
     </div>

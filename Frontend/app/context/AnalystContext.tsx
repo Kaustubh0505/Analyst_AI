@@ -19,7 +19,7 @@ interface AnalystState {
   columns: string[];
   rows: number | null;
   insights: string[];
-  charts: ChartSpec[];
+  charts: any[]; // Changed: Now stores {spec, data}
   edaSummary: EdaSummary | null;
   report: string | null;
   downloadAvailable: boolean;
@@ -39,7 +39,7 @@ export function AnalystProvider({ children }: { children: ReactNode }) {
   const [columns, setColumns] = useState<string[]>([]);
   const [rows, setRows] = useState<number | null>(null);
   const [insights, setInsights] = useState<string[]>([]);
-  const [charts, setCharts] = useState<ChartSpec[]>([]);
+  const [charts, setCharts] = useState<any[]>([]);
   const [edaSummary, setEdaSummary] = useState<EdaSummary | null>(null);
   const [report, setReport] = useState<string | null>(null);
   const [downloadAvailable, setDownloadAvailable] = useState(false);
@@ -47,7 +47,7 @@ export function AnalystProvider({ children }: { children: ReactNode }) {
 
   function setAnalysisResult(result: any) {
     setInsights(result.insights ?? []);
-    setCharts(result.charts ?? []);
+    setCharts(result.aggregated_charts ?? []);
     setEdaSummary(result.eda_summary ?? null);
     setChartData(result.chart_data ?? []);
     setDownloadAvailable(true);
