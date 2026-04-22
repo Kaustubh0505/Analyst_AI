@@ -37,78 +37,33 @@ def report_generator(state: AnalystState) -> dict:
     # 🔥 Enhanced Prompt
     # -------------------------------
     prompt = f"""
-You are a senior data analyst preparing a professional business report for stakeholders.
+### ROLE
+You are a Senior Data Analyst and Business Intelligence Manager. Your goal is to synthesize complex data analysis into a professional, stakeholder-ready executive report.
 
-Your goal is to transform raw analysis into clear, decision-oriented insights.
-
--------------------------
-REPORT OBJECTIVE:
--------------------------
-- Help stakeholders understand what is happening in the data
-- Highlight key risks, opportunities, and trends
-- Provide actionable recommendations
-
--------------------------
-STRICT INSTRUCTIONS:
--------------------------
-- DO NOT repeat raw JSON
-- DO NOT list data blindly
-- Focus on interpretation, not just observation
-- Prioritize the MOST important findings
-- Use numbers, percentages, and comparisons where possible
-
--------------------------
-HOW TO WRITE:
--------------------------
-- Be concise but insightful
-- Use professional, business-friendly language
-- Each section should add value (no fluff)
-- Link findings → implications → actions
-
--------------------------
-INPUT DATA:
--------------------------
-
-EDA Summary:
+### CONTEXT: EDA SUMMARY
 {eda_json}
 
-Key Insights:
+### CONTEXT: KEY INSIGHTS
 {insight_text}
 
-Suggested Visualizations:
+### CONTEXT: VISUALIZATIONS
 {charts_json}
 
--------------------------
-OUTPUT STRUCTURE:
--------------------------
+### REPORT STRUCTURE
+1.  **Executive Summary**: A high-level overview (3-5 sentences) of the most critical findings and their business impact.
+2.  **Data Pulse**: A brief summary of the dataset size, health (nulls/duplicates), and key column types.
+3.  **Deep Dive Insights**: Elaborate on the top 3-5 insights. Link statistical findings to potential real-world causes or consequences. Use **bold** for key metrics.
+4.  **Visual Recommendations**: Explain the reasoning behind the suggested charts and what specific trends they will reveal to stakeholders.
+5.  **Strategic Recommendations**: Provide 3 actionable, data-backed steps the business should take based on this analysis.
 
-1. Executive Summary
-- 3–5 sentences summarizing the most critical findings
-- Include major trends and key takeaway
+### GUIDELINES
+- **Tone**: Authoritative, professional, and concise.
+- **Accuracy**: Do not hallucinate data that isn't in the context.
+- **Clarity**: Avoid technical jargon where a business term works better (e.g., use "Variability" instead of "Heteroscedasticity").
+- **Formatting**: Return ONLY the report content. Use clear headings. No markdown decorators like triple backticks for the whole report.
 
-2. Dataset Overview
-- Brief description of dataset (columns, types, size if available)
-
-3. Key Findings
-- Expand top insights (NOT all)
-- Combine related insights
-- Include numbers and comparisons
-- Highlight anomalies or unexpected patterns
-
-4. Visualizations
-- Explain WHY each chart is useful
-- Link charts to insights (not just listing them)
-
-5. Recommendations
-- Provide 3–5 actionable recommendations
-- Based on data (not generic advice)
-- Focus on business impact
-
--------------------------
-OUTPUT:
--------------------------
-Return clean, well-structured text.
-No markdown. No JSON.
+### OUTPUT
+Return the report as well-formatted text.
 """
 
     # -------------------------------

@@ -83,35 +83,45 @@ def data_cleaner(state: AnalystState) -> dict:
     data_profile = generate_data_profile(df)
 
     prompt = f"""
-You are an expert AI Data Scientist specializing in Data Cleaning. 
-Your task is to analyze the provided dataset profile and generate Python (pandas) code to clean it thoroughly.
+### ROLE
+You are an expert Data Scientist and Automation Engineer specializing in Data Cleaning. 
+Your task is to analyze the provided dataset profile and generate high-quality Python (pandas) code to clean it.
 
-### Dataset Profile:
+### DATASET PROFILE
 {data_profile}
 
-### Cleaning Goals:
-1. Standardize column names (snake_case, no spaces).
-2. Handle missing values intelligently (impute numerically with median/mode, or drop if >80% null).
-3. Fix data types: Ensure dates are datetime objects, numbers are numeric, and categorical strings are clean.
-4. Remove outlier noise: Identify columns that are likely ID-only or have zero variance and drop them.
-5. Standardize text: Trim spaces, fix casing where obvious.
+### CLEANING OBJECTIVES
+1.  **Standardize Column Names**: Convert to `snake_case`, remove leading/trailing spaces, and ensure no special characters except underscores.
+2.  **Date/Time Conversion**: Convert columns that look like dates to `datetime64[ns]` objects.
+3.  **Missing Value Imputation**:
+    *   Numerical: Use median or mode based on distribution (prefer median for skewed data).
+    *   Categorical: Use mode or a placeholder like 'Unknown'.
+    *   Drop columns if >80% of values are missing.
+4.  **Data Type Integrity**: Ensure numerical columns are actually numeric (float/int).
+5.  **Deduplication**: Remove duplicate rows.
+6.  **Text Standardization**: Strip whitespace and fix casing for categorical columns.
 
-### Output Format:
-Your response must contain:
-1. **Analysis**: A brief summary of the issues found.
-2. **Cleaning Code**: A Python code block using `df` as the variable name for the dataframe. 
-   - DO NOT import pandas (it's already imported as `pd`).
-   - DO NOT include `df = pd.read_csv(...)`.
-   - The code should modify `df` or return it.
+### STRICT OUTPUT FORMAT
+Your response MUST follow this exact structure:
+1. **Analysis**: A concise, 3-sentence summary of the cleaning strategy.
+2. **Cleaning Code**: The Python code block.
+
+### GUARDRAILS & RULES
+- Use ONLY the provided `df` variable.
+- DO NOT import `pandas` or `numpy` (they are pre-imported as `pd` and `np`).
+- DO NOT include `df = pd.read_csv(...)` or any data loading.
+- Ensure the code is production-ready and error-resistant.
+- Return ONLY the analysis and the code block.
 
 Example:
+Analysis: I will standardize column names to snake_case and handle missing values in 'price' using the median. Duplicate rows will also be removed.
 ```python
-# Analysis: Found mixed casing in 'City' and 50% nulls in 'Salary'
-df.columns = [c.lower().replace(' ', '_') for c in df.columns]
-df['city'] = df['city'].str.title()
-df['salary'] = df['salary'].fillna(df['salary'].median())
+df.columns = [c.lower().replace(' ', '_').strip() for c in df.columns]
+df['price'] = pd.to_numeric(df['price'], errors='coerce').fillna(df['price'].median())
+df = df.drop_duplicates()
 ```
 """
+
 
     try:
         response = invoke_llm(prompt, agent_id=1)

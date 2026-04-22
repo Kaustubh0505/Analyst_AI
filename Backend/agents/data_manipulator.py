@@ -15,15 +15,34 @@ def data_manipulator(state: AnalystState) -> dict:
     columns = list(df.columns)
 
     plan_prompt = f"""
-You are a data transformation assistant.
+### ROLE
+You are a Data Transformation Expert. Your task is to convert a natural language request into a structured data manipulation plan.
 
-Available columns:
+### AVAILABLE COLUMNS
 {columns}
 
-User instruction:
+### USER INSTRUCTION
 "{user_query}"
 
-Return ONLY valid JSON.
+### TASK
+Generate a JSON plan describing the transformation. 
+
+### STRICT OUTPUT FORMAT
+Return ONLY valid JSON. No intro, no markdown, no explanation.
+
+{{
+  "action": "drop_columns|filter_rows|rename_columns|fill_nulls|drop_duplicates",
+  "columns": ["list", "of", "cols"], (if drop_columns)
+  "condition": "pandas_query_string", (if filter_rows, e.g., "age > 30 and city == 'NYC'")
+  "mapping": {{"old_name": "new_name"}}, (if rename_columns)
+  "column": "name", (if fill_nulls)
+  "strategy": "mean|median|mode|zero" (if fill_nulls)
+}}
+
+### GUARDRAILS
+- Valid actions: `drop_columns`, `filter_rows`, `rename_columns`, `fill_nulls`, `drop_duplicates`.
+- Ensure `condition` is a valid pandas `.query()` string.
+- Column names must MATCH the available columns exactly.
 """
 
     try:

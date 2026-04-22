@@ -22,35 +22,35 @@ def qa_agent(state: AnalystState) -> dict:
     # 1. Intent Classification
     # -------------------------------
     classification_prompt = f"""
-You are an intent classification system for a data analysis assistant.
+### ROLE
+You are an Intent Classification System for a Data Analysis Assistant.
 
-Your job is to classify the user's message into ONE of the following categories:
+### TASK
+Classify the user's message into EXACTLY one of these categories:
+- `question` → Requests for information, insights, trends, or data explanations.
+- `manipulation` → Requests to filter, sort, group, transform, or modify the dataset structure.
 
-1. question → Asking about data, insights, trends, explanations
-2. manipulation → Asking to modify, filter, sort, or transform data
+### CLASSIFICATION CRITERIA
+1. **question**:
+   - "How many sales were made?"
+   - "What is the average price?"
+   - "Why did revenue drop in Q3?"
+   - "Compare product A and B."
+2. **manipulation**:
+   - "Remove the ID column."
+   - "Filter for values above 100."
+   - "Group by city and sum sales."
+   - "Rename 'col1' to 'Price'."
 
--------------------------
-RULES:
--------------------------
-Classify as "question" if:
-- Asking about insights, meaning, trends, comparisons
-- Asking "why", "what", "how", "which"
-- Follow-ups like "What about 2022?", "And revenue?"
+### EDGE CASES
+- If the user asks a follow-up that implies data exploration (e.g., "And for 2023?"), classify as `question`.
+- If unsure, default to `question`.
 
-Classify as "manipulation" if:
-- Asking to filter, group, sort, or transform data
-- Asking to create new columns or recompute results
-
--------------------------
-EDGE CASE:
-If unsure → return "question"
-
--------------------------
-User Message:
+### USER MESSAGE
 "{user_query}"
 
-Respond with ONLY one word:
-question OR manipulation
+### OUTPUT
+Return ONLY the word `question` or `manipulation`.
 """
 
     try:
@@ -76,37 +76,27 @@ question OR manipulation
         memory_context = format_memory_for_prompt(session_id)
 
         resolution_prompt = f"""
-You are an intelligent assistant that converts user queries into clear, standalone analytical questions.
+### ROLE
+You are a Query Resolution Specialist. You convert conversational follow-ups into standalone, self-explanatory analytical questions.
 
--------------------------
-INSTRUCTIONS:
--------------------------
-- If already clear → return as-is
-- If follow-up → expand using history
-- Preserve original intent EXACTLY
-- Do NOT add assumptions
+### CONTEXT
+- History helps understand pronouns (it, they, them) and implicit filters.
+- Latest user message might be a fragment.
 
--------------------------
-EXAMPLES:
--------------------------
-History: "Show revenue by year"
-User: "And for 2022?"
-→ "What is the revenue for 2022?"
-
-History: "Top products by sales"
-User: "What about profit?"
-→ "What is the profit for the top products?"
-
--------------------------
-Conversation History:
+### HISTORY
 {memory_context}
 
-Latest User Message:
+### LATEST USER MESSAGE
 "{user_query}"
 
--------------------------
-OUTPUT:
-Return ONLY the rewritten standalone question.
+### TASK
+Rewrite the latest message into a standalone question that can be understood without history. 
+- Preserve the original analytical intent.
+- Do NOT add new analysis.
+- If it's already standalone, return it as-is.
+
+### OUTPUT
+Return ONLY the rewritten question.
 """
 
         try:
@@ -131,46 +121,30 @@ Return ONLY the rewritten standalone question.
         insights_text = "\n".join(insights)
 
         answer_prompt = f"""
-You are a highly experienced senior data analyst.
+### ROLE
+You are a Senior Data Analyst providing insights directly to a CEO. Your answers must be accurate, data-driven, and business-focused.
 
-You are answering a user's question STRICTLY based on provided dataset analysis.
-
--------------------------
-STRICT RULES:
--------------------------
-- Use ONLY the provided context (EDA + insights)
-- DO NOT hallucinate
-- DO NOT assume missing values
-- If insufficient data → say "Not enough data available"
-
--------------------------
-HOW TO ANSWER:
--------------------------
-1. Start with a direct answer
-2. Support with data (numbers, %, column names)
-3. Add brief interpretation (why it matters)
-4. Keep it concise (2–5 sentences)
-
--------------------------
-CONTEXT:
--------------------------
-
-Conversation Summary:
-{memory_context}
-
-EDA Summary:
+### CONTEXT: EDA SUMMARY
 {eda_json}
 
-Key Insights:
+### CONTEXT: KEY INSIGHTS
 {insights_text}
 
--------------------------
-USER QUESTION:
+### PREVIOUS CONVERSATION
+{memory_context}
+
+### USER QUESTION
 {resolved_query}
 
--------------------------
-OUTPUT:
-Only return the final answer.
+### GUIDELINES
+1.  **Strict Accuracy**: Bases answers ONLY on the provided context. If the data is missing, say "I don't have enough data to answer that."
+2.  **No Hallucinations**: Do not invent numbers or trends.
+3.  **Specifics**: Reference specific columns and values. Use percentages or deltas if available.
+4.  **Formatting**: Use bold text for key figures. Keep responses to 2-4 concise sentences.
+5.  **Guardrails**: Do not provide advice outside of data analysis. Do not mention the context JSON in your response.
+
+### OUTPUT
+Return ONLY the final analytical answer.
 """
 
         try:

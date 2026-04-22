@@ -24,57 +24,40 @@ def visualization_agent(state: AnalystState) -> dict:
     # 🔥 Improved Prompt
     # -------------------------------
     prompt = f"""
-You are a senior data visualization expert designing charts for a data analyst dashboard.
+### ROLE
+You are a Senior Data Visualization Expert. Your goal is to design a set of charts for an executive dashboard that reveal the most critical insights from the dataset.
 
-Your goal is to recommend the MOST INSIGHTFUL charts based on the dataset.
-
--------------------------
-STRICT THINKING PROCESS:
--------------------------
-For each chart:
-1. Identify column types (numerical, categorical, datetime)
-2. Choose ONLY meaningful column combinations
-3. Ensure the chart reveals trends, patterns, or comparisons
-4. Avoid random or meaningless pairings
-
--------------------------
-CHART RULES:
--------------------------
-- histogram → distribution of a numeric column
-- bar → categorical vs numeric comparison
-- line → trends over time (requires datetime)
-- scatter → relationship between two numeric columns
-- pie → proportions (ONLY if categories < 6)
-- heatmap → correlation matrix (numeric columns only)
-
--------------------------
-STRICT CONSTRAINTS:
--------------------------
-- ONLY use existing column names
-- DO NOT hallucinate columns
-- DO NOT repeat similar charts
-- Each chart must provide UNIQUE insight
-- Prefer high-variance or important columns
-
--------------------------
-EDA RESULTS:
--------------------------
+### EDA CONTEXT (JSON)
 {eda_json}
 
--------------------------
-OUTPUT FORMAT (STRICT JSON ONLY):
--------------------------
+### DESIGN PRINCIPLES
+1.  **Relevance**: Only suggest charts for columns with significant variance or important business metrics.
+2.  **Clarity**: Avoid dense scatter plots if there are >500 data points; use histograms instead.
+3.  **Appropriateness**:
+    *   `histogram`: Price distributions, quantity ranges.
+    *   `bar`: Sales by Category, Count by Region.
+    *   `line`: Revenue over Time (requires date column).
+    *   `scatter`: Relationship between two numeric variables (e.g., Discount vs. Profit).
+    *   `pie`: ONLY for small segments (e.g., Gender, Yes/No).
+    *   `heatmap`: Correlation matrix for all numeric columns.
+
+### STRICT OUTPUT FORMAT
+Return ONLY a valid JSON array of objects. No intro, no markdown blocks, no code fences.
 [
   {{
     "type": "bar|line|scatter|histogram|pie|heatmap",
     "x": "column_name",
-    "y": "column_name (if applicable)",
-    "title": "Insightful chart title"
+    "y": "column_name (required for bar, line, scatter)",
+    "title": "A descriptive, insight-focused title"
   }}
 ]
 
-Return ONLY JSON. No explanation.
+### GUARDRAILS
+- Use ONLY exact column names from the context.
+- Maximum 6 high-quality suggestions.
+- Do NOT provide an intro or outro.
 """
+
 
     # -------------------------------
     # Call LLM
